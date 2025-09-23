@@ -10,6 +10,18 @@
 To get notification of new releases of Shapelib <i>subscribe</i> to
 the project mailing list at https://lists.osgeo.org/pipermail/shapelib/.<p>
 
+<b>Release 1.6.2</b>:
+<ul>
+<li>Nullify userdata also in SASetupUtf8Hooks</li>
+<li>Test suite enhancements</li>
+<li>CMake: no longer use CTest and add manual BUILD_TESTING option instead (default to ON)</li>
+<li>Prefer tagged version of Google Benchmark</li>
+<li>dbfcreate: allow creation of Date and Logical fields #167 (#168)</li>
+<li>Fix cppcheck nullPointerOutOfMemory warnings</li>
+<li>DBFWriteAttribute(): return true when no precision loss occured when writing a double</li>
+<li>SHPCreateLL()/DBFCreate(): make error message contains full filename (in case it is very long)</li>
+</ul>
+
 <b>Release 1.6.1</b>:
 <ul>
 <li>DBFIsValueNULL(): accept empty string as NULL Date (https://github.com/OSGeo/gdal/issues/10405)</li>
