@@ -1349,7 +1349,7 @@ SHPObject *SHPClone(const SHPObject *psCShape, int lowPart, int highPart)
 
 #ifdef DEBUG
     int i;
-    if (highPart = psCShape->nParts)
+    if (highPart == psCShape->nParts)
         i = psCShape->nVertices;
     else
         i = psCShape->panPartStart[highPart];
