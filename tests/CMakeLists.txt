@@ -32,7 +32,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 # Disable building GMock
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 
-# Do not install GTest 
+# Do not install GTest
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
@@ -52,7 +52,7 @@ foreach(executable dbf_test sbn_test shp_test shp_bench)
     set(exec_folder "tests/bench")
   else()
     set(exec_folder "tests")
-  endif()  
+  endif()
   set_target_properties(${executable} PROPERTIES FOLDER ${exec_folder} CXX_EXTENSIONS OFF)
   if (BUILD_SHARED_LIBS AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21" AND (WIN32 OR CYGWIN))
     add_custom_command(
@@ -62,6 +62,51 @@ foreach(executable dbf_test sbn_test shp_test shp_bench)
     )
   endif()
 endforeach()
+
+add_executable(
+  shpgeo_test
+  ${PROJECT_SOURCE_DIR}/shpgeo_test.cc
+  ${CMAKE_SOURCE_DIR}/contrib/shpgeo.c
+)
+target_include_directories(shpgeo_test PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/contrib)
+target_link_libraries(shpgeo_test PRIVATE ${PACKAGE} gtest benchmark)
+add_test(
+  NAME shpgeo_test
+  COMMAND shpgeo_test
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
+target_compile_features(shpgeo_test PUBLIC cxx_std_17)
+set_target_properties(shpgeo_test PROPERTIES FOLDER tests CXX_EXTENSIONS OFF)
+if (BUILD_SHARED_LIBS AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21" AND (WIN32 OR CYGWIN))
+  add_custom_command(
+    TARGET shpgeo_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:shpgeo_test> $<TARGET_FILE_DIR:shpgeo_test>
+    COMMAND_EXPAND_LISTS
+  )
+endif()
+
+add_executable(
+  shpdxf_test
+  ${PROJECT_SOURCE_DIR}/shpdxf_test.cc
+  ${CMAKE_SOURCE_DIR}/contrib/shpdxf.c
+)
+target_include_directories(shpdxf_test PRIVATE ${CMAKE_SOURCE_DIR})
+target_compile_definitions(shpdxf_test PRIVATE SHPDFX_NO_MAIN)
+target_link_libraries(shpdxf_test PRIVATE ${PACKAGE} gtest benchmark)
+add_test(
+  NAME shpdxf_test
+  COMMAND shpdxf_test
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
+target_compile_features(shpdxf_test PUBLIC cxx_std_17)
+set_target_properties(shpdxf_test PROPERTIES FOLDER tests CXX_EXTENSIONS OFF)
+if (BUILD_SHARED_LIBS AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21" AND (WIN32 OR CYGWIN))
+  add_custom_command(
+    TARGET shpdxf_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:shpdxf_test> $<TARGET_FILE_DIR:shpdxf_test>
+    COMMAND_EXPAND_LISTS
+  )
+endif()
 
 configure_file(
   ${CMAKE_SOURCE_DIR}/cmake/shapelib.gta.runsettings.in

@@ -61,7 +61,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    WKBStreamObj *wkbObj = calloc(3, sizeof(int));
+    WKBStreamObj *wkbObj = calloc(1, sizeof(*wkbObj));
 
     int nEntities;
     int nShapeType;

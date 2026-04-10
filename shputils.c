@@ -793,10 +793,10 @@ int main(int argc, char **argv)
     // Check command line usage.
     if (argc < 2)
         error();
-    strcpy(infile, argv[1]);
+    snprintf(infile, sizeof(infile), "%s", argv[1]);
     if (argc > 2)
     {
-        strcpy(outfile, argv[2]);
+        snprintf(outfile, sizeof(outfile), "%s", argv[2]);
         if (strncasecmp2(outfile, "LIST", 0) == 0)
         {
             ilist = true;
@@ -810,7 +810,7 @@ int main(int argc, char **argv)
     {
         setext(infile, "shp");
         printf("DESCRIBE: %s\n", infile);
-        strcpy(outfile, "");
+        outfile[0] = '\0';
     }
 
     // Look for other functions on the command line. (SELECT, UNIT)
@@ -824,12 +824,12 @@ int main(int argc, char **argv)
             i++;
             if (i >= argc)
                 error();
-            strcpy(selectitem, argv[i]);
+            snprintf(selectitem, sizeof(selectitem), "%s", argv[i]);
             i++;
             if (i >= argc)
                 error();
             selcount = 0;
-            strcpy(temp, argv[i]);
+            snprintf(temp, sizeof(temp), "%s", argv[i]);
             cpt = temp;
             tj = atoi(cpt);
             ti = 0;
@@ -853,7 +853,7 @@ int main(int argc, char **argv)
             i++;
             if (i >= argc)
                 error();
-            strcpy(clipfile, argv[i]);
+            snprintf(clipfile, sizeof(clipfile), "%s", argv[i]);
             sscanf(argv[i], "%lf", &cxmin);
             i++;
             if (i >= argc)
