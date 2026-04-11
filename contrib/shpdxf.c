@@ -33,6 +33,46 @@
 
 const char FLOAT_PREC[] = "%16.5f\r\n";
 
+static int dxf_base_type(int shp_type)
+{
+    switch (shp_type)
+    {
+        case SHPT_POINT:
+        case SHPT_POINTZ:
+        case SHPT_POINTM:
+            return SHPT_POINT;
+
+        case SHPT_ARC:
+        case SHPT_ARCZ:
+        case SHPT_ARCM:
+            return SHPT_ARC;
+
+        case SHPT_POLYGON:
+        case SHPT_POLYGONZ:
+        case SHPT_POLYGONM:
+            return SHPT_POLYGON;
+
+        default:
+            return shp_type;
+    }
+}
+
+static int dxf_shape_has_z(int shp_type)
+{
+    switch (shp_type)
+    {
+        case SHPT_POINTZ:
+        case SHPT_ARCZ:
+        case SHPT_POLYGONZ:
+        case SHPT_MULTIPOINTZ:
+        case SHPT_MULTIPATCH:
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
 static void dxf_hdr(double x1, double y1, double x2, double y2, FILE *df)
 {
     // Create HEADER section
@@ -171,7 +211,7 @@ static void dxf_ent_postamble(int dxf_type, FILE *df)
 
 #define MAX_FILESIZE 80
 
-int main(int argc, char **argv)
+int shpdxf_run(int argc, char **argv)
 {
     if (argc < 2)
     {
@@ -237,7 +277,7 @@ int main(int argc, char **argv)
     // Before proceeding, allow the user to specify the ID field to use or
     // default to the record number.
 
-    unsigned int MaxElem = -1;
+    int MaxElem = shp_numrec;
     if (argc > 3)
         MaxElem = atoi(argv[3]);
 
@@ -249,7 +289,7 @@ int main(int argc, char **argv)
     if (argc > 2)
     {
         char idfldName[15];
-        strcpy(idfldName, argv[2]);
+        snprintf(idfldName, sizeof(idfldName), "%s", argv[2]);
         for (idfld = 0; idfld < nflds; idfld++)
         {
             idfld_type = DBFGetFieldInfo(dbf, idfld, fldName, NULL, NULL);
@@ -290,21 +330,15 @@ int main(int argc, char **argv)
             switch (idfld_type)
             {
                 case FTString:
-                    sprintf(id, "lvl_%s",
-                            DBFReadStringAttribute(dbf, recNum, idfld));
+                    snprintf(id, sizeof(id), "lvl_%s",
+                             DBFReadStringAttribute(dbf, recNum, idfld));
                     break;
                 default:
-                    sprintf(id, "%-20.0lf",
-                            DBFReadDoubleAttribute(dbf, recNum, idfld));
+                    snprintf(id, sizeof(id), "%-20.0lf",
+                             DBFReadDoubleAttribute(dbf, recNum, idfld));
             }
         else
-            sprintf(id, "lvl_%-20d", (recNum + 1));
-
-        double elev = 0.0;
-        if (zfld < 0)
-        {
-            elev = DBFReadDoubleAttribute(dbf, recNum, zfld);
-        }
+            snprintf(id, sizeof(id), "lvl_%-20d", (recNum + 1));
 
 #ifdef DEBUG
         printf("\r\nworking on obj %d", recNum);
@@ -312,30 +346,42 @@ int main(int argc, char **argv)
 
         SHPObject *shape = SHPReadObject(shp, recNum);
 
+        const int dxfType = dxf_base_type(shape->nSHPType);
         const int nVertices = shape->nVertices;
+        const int nParts = shape->nParts > 0 ? shape->nParts : 1;
         const int *panParts = shape->panPartStart;
-        int part = 0;
-        for (int vrtx = 0; vrtx < nVertices; vrtx++)
+
+        for (int part = 0; part < nParts; part++)
         {
+            const int partStart = (panParts != NULL) ? panParts[part] : 0;
+            const int partEnd = (panParts != NULL && part + 1 < nParts)
+                                    ? panParts[part + 1]
+                                    : nVertices;
+
 #ifdef DEBUG
-            printf("\rworking on part %d, vertex %d", part, vrtx);
+            printf("\rworking on part %d", part);
 #endif
-            if (panParts[part] == vrtx)
+#ifdef DEBUG
+            printf("object preamble\r\n");
+#endif
+            dxf_ent_preamble(dxfType, id, dxf);
+
+            for (int vrtx = partStart; vrtx < partEnd; vrtx++)
             {
+                double elev = 0.0;
+                if (dxf_shape_has_z(shape->nSHPType) && shape->padfZ != NULL)
+                    elev = shape->padfZ[vrtx];
+                else if (zfld >= 0)
+                    elev = DBFReadDoubleAttribute(dbf, recNum, zfld);
+
 #ifdef DEBUG
-                printf("object preamble\r\n");
+                printf("\rworking on part %d, vertex %d", part, vrtx);
 #endif
-                dxf_ent_preamble(shp_type, id, dxf);
+                dxf_ent(id, shape->padfX[vrtx], shape->padfY[vrtx], elev,
+                        dxfType, dxf);
             }
 
-            dxf_ent(id, shape->padfX[vrtx], shape->padfY[vrtx], elev, shp_type,
-                    dxf);
-
-            if (panParts[part] == (vrtx + 1) || vrtx == (nVertices - 1))
-            {
-                dxf_ent_postamble(shp_type, dxf);
-                part++;
-            }
+            dxf_ent_postamble(dxfType, dxf);
         }
         SHPDestroyObject(shape);
     }
@@ -352,3 +398,10 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#ifndef SHPDFX_NO_MAIN
+int main(int argc, char **argv)
+{
+    return shpdxf_run(argc, argv);
+}
+#endif
